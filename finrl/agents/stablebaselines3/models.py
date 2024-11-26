@@ -218,6 +218,12 @@ class DRLEnsembleAgent:
                 temp_model_kwargs["action_noise"]
             ](mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
         print(temp_model_kwargs)
+        if 'DDPG' in model_name:
+            policy_kwargs = {'net_arch': {
+                'pi': [8, 8, 8],
+                'qf': [8, 8, 8]
+            }}
+
         return MODELS[model_name](
             policy=policy,
             env=env,
@@ -672,7 +678,7 @@ class DRLStackingAgent:
         if model_name not in STACKING_MODELS:
             raise ValueError(
                 f"Model '{model_name}' not found in MODELS."
-            )  # this is more informative than NotImplementedError("NotImplementedError")
+            )
 
         if model_kwargs is None:
             temp_model_kwargs = MODEL_KWARGS[model_name]
@@ -813,7 +819,6 @@ class DRLStackingAgent:
             action, _states = model.predict(trade_obs)
             trade_obs, rewards, dones, info = trade_env.step(action)
             if i == (len(trade_data.index.unique()) - 2):
-                # print(env_test.render())
                 last_state = trade_env.envs[0].render()
 
         df_last_state = pd.DataFrame({"last_state": last_state})
