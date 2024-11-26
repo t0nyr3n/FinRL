@@ -73,7 +73,7 @@ class StockTradingStackingEnv(gym.Env):
         self.tech_indicator_list = tech_indicator_list
         self.action_space = spaces.Box(low=-1, high=1, shape=(self.action_space,))
         self.observation_space = spaces.Box(
-            low=-np.inf, high=np.inf, shape=(self.state_space,)
+            low=-np.inf, high=np.inf, shape=(self.state_space-stock_dim,)
         )
         self.data = self.df.loc[self.day, :]
         self.terminal = False
@@ -325,7 +325,9 @@ class StockTradingStackingEnv(gym.Env):
             # logger.record("environment/total_cost", self.cost)
             # logger.record("environment/total_trades", self.trades)
 
-            return self.state, self.reward, self.terminal, False, {}
+            trucated_state = self.state[:1] + self.state[self.stock_dim + 1:]
+
+            return trucated_state, self.reward, self.terminal, False, {}
 
         else:
             actions = actions * self.hmax  # actions initially is scaled between 0 to 1
@@ -381,7 +383,8 @@ class StockTradingStackingEnv(gym.Env):
                 self.state
             )  # add current state in state_recorder for each step
 
-        return self.state, self.reward, self.terminal, False, {}
+        trucated_state = self.state[:1] + self.state[self.stock_dim + 1:]
+        return trucated_state, self.reward, self.terminal, False, {}
 
     def reset(
         self,
@@ -421,7 +424,8 @@ class StockTradingStackingEnv(gym.Env):
 
         self.episode += 1
 
-        return self.state, {}
+        trucated_state = self.state[:1] + self.state[self.stock_dim + 1:]
+        return trucated_state, {}
 
     def render(self, mode="human", close=False):
         return self.state
