@@ -13,7 +13,7 @@ from stable_baselines3 import TD3
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.noise import NormalActionNoise
 from stable_baselines3.common.noise import OrnsteinUhlenbeckActionNoise
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from finrl import config
 from finrl.meta.env_stock_trading.env_stocktrading import StockTradingEnv
@@ -346,6 +346,7 @@ class DRLEnsembleAgent:
                 )
             ]
         )
+        trade_env = VecNormalize(trade_env, norm_obs=False, norm_reward=True)
 
         trade_obs = trade_env.reset()
 
@@ -395,6 +396,7 @@ class DRLEnsembleAgent:
             "to ",
             validation_end_date,
         )
+
         val_env = DummyVecEnv(
             [
                 lambda: StockTradingEnv(
@@ -417,6 +419,8 @@ class DRLEnsembleAgent:
                 )
             ]
         )
+        val_env = VecNormalize(val_env, norm_obs=False, norm_reward=True)
+
         val_obs = val_env.reset()
         self.DRL_validation(
             model=model,
@@ -561,6 +565,7 @@ class DRLEnsembleAgent:
                     )
                 ]
             )
+            self.train_env = VecNormalize(self.train_env, norm_obs=False, norm_reward=True)
 
             validation = data_split(
                 self.df,
@@ -812,6 +817,8 @@ class DRLStackingAgent:
                 )
             ]
         )
+        trade_env = VecNormalize(trade_env, norm_obs=False, norm_reward=True)
+
 
         trade_obs = trade_env.reset()
 
@@ -882,6 +889,7 @@ class DRLStackingAgent:
                 )
             ]
         )
+        val_env = VecNormalize(val_env, norm_obs=False, norm_reward=True)
         val_obs = val_env.reset()
         self.DRL_validation(
             model=model,
@@ -996,6 +1004,7 @@ class DRLStackingAgent:
                     )
                 ]
             )
+            self.train_env = VecNormalize(self.train_env, norm_obs=False, norm_reward=True)
 
             validation = data_split(
                 self.df,
