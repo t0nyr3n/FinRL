@@ -123,6 +123,7 @@ class DRLAgent:
             total_timesteps=total_timesteps,
             tb_log_name=tb_log_name,
             callback=TensorboardCallback(),
+            log_interval=1,
         )
         return model
 
@@ -240,6 +241,7 @@ class DRLEnsembleAgent:
             total_timesteps=total_timesteps,
             tb_log_name=tb_log_name,
             callback=TensorboardCallback(),
+            log_interval=1,
         )
         model.save(
             f"{config.TRAINED_MODEL_DIR}/{model_name.upper()}_{total_timesteps // 1000}k_{iter_num}"
@@ -712,6 +714,7 @@ class DRLStackingAgent:
             total_timesteps=total_timesteps,
             tb_log_name=tb_log_name,
             callback=TensorboardCallback(),
+            log_interval=1,
         )
         model.save(
             f"{config.TRAINED_MODEL_DIR}/{model_name.upper()}_{total_timesteps // 1000}k_{iter_num}"
