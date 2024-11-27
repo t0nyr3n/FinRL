@@ -1414,13 +1414,7 @@ FX_TICKER = [
     "EURDKK=X",
 ]
 
-
 CUSTOM_TICKER = [
-    "GME"
-    ]
-
-
-CUSTOM_TICKER_2 = [
     "INTC",
     "AAPL",
     "CSCO",
