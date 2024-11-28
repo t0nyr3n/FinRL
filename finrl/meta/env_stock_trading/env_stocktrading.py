@@ -44,6 +44,7 @@ class StockTradingEnv(gym.Env):
         model_name="",
         mode="",
         iteration="",
+        model_file_suffix=""
     ):
         self.day = day
         self.df = df
@@ -70,6 +71,7 @@ class StockTradingEnv(gym.Env):
         self.initial = initial
         self.previous_state = previous_state
         self.model_name = model_name
+        self.model_file_suffix = model_file_suffix
         self.mode = mode
         self.iteration = iteration
         # initalize state
@@ -98,6 +100,7 @@ class StockTradingEnv(gym.Env):
         #         self.logger = Logger('results',[CSVOutputFormat])
         # self.reset()
         self._seed()
+
 
     def _sell_stock(self, index, action):
         def _do_sell_normal():
@@ -267,25 +270,25 @@ class StockTradingEnv(gym.Env):
                 df_actions = self.save_action_memory()
                 df_actions.to_csv(
                     "results/actions_{}_{}_{}.csv".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
                     )
                 )
                 df_total_value.to_csv(
                     "results/account_value_{}_{}_{}.csv".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
                     ),
                     index=False,
                 )
                 df_rewards.to_csv(
                     "results/account_rewards_{}_{}_{}.csv".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
                     ),
                     index=False,
                 )
                 plt.plot(self.asset_memory, "r")
                 plt.savefig(
                     "results/account_value_{}_{}_{}.png".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
                     )
                 )
                 plt.close()

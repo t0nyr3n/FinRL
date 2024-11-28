@@ -34,6 +34,10 @@ NOISE = {
 }
 
 
+def hyperparameterized_model_name(model_name: str, model_kwargs: dict):
+    return model_name + '_' + '_'.join([k[0:2]+'='+str(v) for k, v in model_kwargs.items()])
+
+
 class TensorboardCallback(BaseCallback):
     """
     Custom callback for plotting additional values in tensorboard.
@@ -104,7 +108,9 @@ class DRLAgent:
             model_kwargs["action_noise"] = NOISE[model_kwargs["action_noise"]](
                 mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions)
             )
-        print(model_kwargs)
+
+        model_kwargs = {k:v for k,v in model_kwargs.items() if k != 'name'}
+
         return MODELS[model_name](
             policy=policy,
             env=self.env,
@@ -202,6 +208,7 @@ class DRLEnsembleAgent:
         model_kwargs=None,
         seed=None,
         verbose=1,
+        model_file_suffix=''
     ):
         if model_name not in MODELS:
             raise ValueError(
@@ -218,17 +225,13 @@ class DRLEnsembleAgent:
             temp_model_kwargs["action_noise"] = NOISE[
                 temp_model_kwargs["action_noise"]
             ](mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-        print(temp_model_kwargs)
-        if 'DDPG' in model_name:
-            policy_kwargs = {'net_arch': {
-                'pi': [8, 8, 8],
-                'qf': [8, 8, 8]
-            }}
+
+        temp_model_kwargs = {k:v for k,v in temp_model_kwargs.items() if k != 'name'}
 
         return MODELS[model_name](
             policy=policy,
             env=env,
-            tensorboard_log=f"{config.TENSORBOARD_LOG_DIR}/{model_name}",
+            tensorboard_log=f"{config.TENSORBOARD_LOG_DIR}/{model_file_suffix}",
             verbose=verbose,
             policy_kwargs=policy_kwargs,
             seed=seed,
@@ -236,7 +239,7 @@ class DRLEnsembleAgent:
         )
 
     @staticmethod
-    def train_model(model, model_name, tb_log_name, iter_num, total_timesteps=5000):
+    def train_model(model, model_name, tb_log_name, iter_num, total_timesteps=5000, model_file_suffix=''):
         model = model.learn(
             total_timesteps=total_timesteps,
             tb_log_name=tb_log_name,
@@ -244,15 +247,15 @@ class DRLEnsembleAgent:
             log_interval=1,
         )
         model.save(
-            f"{config.TRAINED_MODEL_DIR}/{model_name.upper()}_{total_timesteps // 1000}k_{iter_num}"
+            f"{config.TRAINED_MODEL_DIR}/{model_file_suffix}_{total_timesteps // 1000}k_{iter_num}"
         )
         return model
 
     @staticmethod
-    def get_validation_sharpe(iteration, model_name):
+    def get_validation_sharpe(iteration, model_name, model_file_suffix):
         """Calculate Sharpe ratio based on validation results"""
         df_total_value = pd.read_csv(
-            f"results/account_value_validation_{model_name}_{iteration}.csv"
+            f"results/account_value_validation_{model_file_suffix}_{iteration}.csv"
         )
         # If the agent did not make any transaction
         if df_total_value["daily_return"].var() == 0:
@@ -314,7 +317,7 @@ class DRLEnsembleAgent:
             test_obs, rewards, dones, info = test_env.step(action)
 
     def DRL_prediction(
-        self, model, name, last_state, iter_num, turbulence_threshold, initial
+        self, model, name, last_state, iter_num, turbulence_threshold, initial, model_file_suffix
     ):
         """make a prediction based on trained model"""
 
@@ -345,6 +348,7 @@ class DRLEnsembleAgent:
                     mode="trade",
                     iteration=iter_num,
                     print_verbosity=self.print_verbosity,
+                    model_file_suffix=model_file_suffix
                 )
             ]
         )
@@ -360,7 +364,7 @@ class DRLEnsembleAgent:
                 last_state = trade_env.envs[0].render()
 
         df_last_state = pd.DataFrame({"last_state": last_state})
-        df_last_state.to_csv(f"results/last_state_{name}_{i}.csv", index=False)
+        df_last_state.to_csv(f"results/last_state_{name}_{model_file_suffix}_{i}.csv", index=False)
         return last_state
 
     def _train_window(
@@ -374,6 +378,7 @@ class DRLEnsembleAgent:
         i,
         validation,
         turbulence_threshold,
+        model_file_suffix
     ):
         """
         Train the model for a single window.
@@ -382,18 +387,21 @@ class DRLEnsembleAgent:
             return None, sharpe_list, -1
 
         print(f"======{model_name} Training========")
+
+        self.train_env.model_file_suffix = model_file_suffix
         model = self.get_model(
-            model_name, self.train_env, policy="MlpPolicy", model_kwargs=model_kwargs
+            model_name, self.train_env, policy="MlpPolicy", model_kwargs=model_kwargs, model_file_suffix=model_file_suffix
         )
         model = self.train_model(
             model,
             model_name,
-            tb_log_name=f"{model_name}_{i}",
+            tb_log_name=f"{model_name}_{model_file_suffix}_{i}",
             iter_num=i,
             total_timesteps=timesteps_dict[model_name],
+            model_file_suffix=model_file_suffix
         )  # 100_000
         print(
-            f"======{model_name} Validation from: ",
+            f"======{model_name},  {model_file_suffix} Validation from: ",
             validation_start_date,
             "to ",
             validation_end_date,
@@ -418,6 +426,7 @@ class DRLEnsembleAgent:
                     model_name=model_name,
                     mode="validation",
                     print_verbosity=self.print_verbosity,
+                    model_file_suffix=model_file_suffix
                 )
             ]
         )
@@ -430,8 +439,8 @@ class DRLEnsembleAgent:
             test_env=val_env,
             test_obs=val_obs,
         )
-        sharpe = self.get_validation_sharpe(i, model_name=model_name)
-        print(f"{model_name} Sharpe Ratio: ", sharpe)
+        sharpe = self.get_validation_sharpe(i, model_name=model_name, model_file_suffix=model_file_suffix)
+        print(f"{model_name}, {model_file_suffix} Sharpe Ratio: ", sharpe)
         sharpe_list.append(sharpe)
         return model, sharpe_list, sharpe
 
@@ -590,8 +599,10 @@ class DRLEnsembleAgent:
             # print("training: ",len(data_split(df, start=20090000, end=test.datadate.unique()[i-rebalance_window]) ))
             # print("==============Model Training===========")
             # Train Each Model
+
+
             for model_name in MODELS.keys():
-                # Train The Model
+                model_file_suffix = hyperparameterized_model_name(model_name, kwargs[model_name])
                 model, sharpe_list, sharpe = self._train_window(
                     model_name,
                     kwargs[model_name],
@@ -602,6 +613,7 @@ class DRLEnsembleAgent:
                     i,
                     validation,
                     turbulence_threshold,
+                    model_file_suffix
                 )
                 # Save the model's sharpe ratios, and the model itself
                 model_dct[model_name]["sharpe_list"] = sharpe_list
@@ -637,6 +649,7 @@ class DRLEnsembleAgent:
                 iter_num=i,
                 turbulence_threshold=turbulence_threshold,
                 initial=initial,
+                model_file_suffix=model_file_suffix
             )
             # Trading ends
 
@@ -671,7 +684,12 @@ class DRLEnsembleAgent:
         return df_summary
 
 
+
+
 class DRLStackingAgent:
+
+
+
     @staticmethod
     def get_model(
         model_name,
@@ -697,7 +715,7 @@ class DRLStackingAgent:
             temp_model_kwargs["action_noise"] = NOISE[
                 temp_model_kwargs["action_noise"]
             ](mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-        print(temp_model_kwargs)
+
         return STACKING_MODELS[model_name](
             policy=policy,
             env=env,
@@ -709,7 +727,7 @@ class DRLStackingAgent:
         )
 
     @staticmethod
-    def train_model(model, model_name, tb_log_name, iter_num, total_timesteps=5000):
+    def train_model(model, model_name, tb_log_name, iter_num, total_timesteps=5000, model_file_suffix=''):
         model = model.learn(
             total_timesteps=total_timesteps,
             tb_log_name=tb_log_name,
@@ -778,6 +796,7 @@ class DRLStackingAgent:
         self.tech_indicator_list = tech_indicator_list
         self.print_verbosity = print_verbosity
         self.train_env = None
+
 
     def DRL_validation(self, model, test_data, test_env, test_obs):
         """validation process"""
