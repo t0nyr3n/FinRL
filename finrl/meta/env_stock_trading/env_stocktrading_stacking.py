@@ -17,12 +17,13 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO}
 
 # load 5 models
+
 PRETRAINED_MODEL_CONFIGS = [
-    {"model_type": "ppo", "model_path": "trained_models/PPO_10K_126.zip"},
-    {"model_type": "a2c", "model_path": "trained_models/A2C_10K_126.zip"},
-    {"model_type": "ddpg", "model_path": "trained_models/DDPG_10K_126.zip"},
-    {"model_type": "sac", "model_path": "trained_models/SAC_10K_126.zip"},
-    {"model_type": "td3", "model_path": "trained_models/TD3_10K_126.zip"},
+    {"model_type": "ppo", "model_path": "trained_models/f39725b2d259df800dc97ca95f52fbb0_10k_400"},
+    {"model_type": "a2c", "model_path": "trained_models/210871e0535ee3313f8053f76e6791d0_10k_400"},
+    {"model_type": "ddpg", "model_path": "trained_models/42990f447ea692929bb19f84fe4ce512_10k_400"},
+    {"model_type": "sac", "model_path": "trained_models/fd9fd3e1288e22a857f30c44645d8997_10k_400"},
+    {"model_type": "td3", "model_path": "trained_models/d4d1805323cb87f6cbf3f5e3e76a3a15_10k_400"},
 ]
 
 matplotlib.use("Agg")
@@ -57,7 +58,8 @@ class StockTradingStackingEnv(gym.Env):
         previous_state=[],
         model_name="",
         mode="",
-        iteration="",
+        iteration=""
+
     ):
         self.day = day
         self.df = df
@@ -423,9 +425,7 @@ class StockTradingStackingEnv(gym.Env):
         self.date_memory = [self._get_date()]
 
         self.episode += 1
-
-        trucated_state = self.state[:1] + self.state[self.stock_dim + 1:]
-        return trucated_state, {}
+        return self.state[0:1] + self.state[self.stock_dim+1:] , {}
 
     def render(self, mode="human", close=False):
         return self.state
@@ -488,12 +488,11 @@ class StockTradingStackingEnv(gym.Env):
         agent_actions = []
         for model_name in self.stacking_models.keys():
             model = self.stacking_models[model_name]
-            model_state_dim = model.observation_space.shape[0]
-            trimmed_state = state[0:model_state_dim]
+            trimmed_state = state[:1] + state[self.stock_dim + 1:]
             action, _ = model.predict(trimmed_state, deterministic=True)
             agent_actions += list(action)
 
-        state = trimmed_state + agent_actions
+        state = state + agent_actions
 
         return state
 
@@ -527,13 +526,11 @@ class StockTradingStackingEnv(gym.Env):
         agent_actions = []
         for model_name in self.stacking_models.keys():
             model = self.stacking_models[model_name]
-            model_state_dim = model.observation_space.shape[0]
-            trimmed_state = state[0:model_state_dim]
+            trimmed_state = state[:1] + state[self.stock_dim + 1:]
             action, _ = model.predict(trimmed_state, deterministic=True)
             agent_actions += list(action)
-        state = trimmed_state + agent_actions
 
-        return state
+        return state + agent_actions
 
     def _get_date(self):
         if len(self.df.tic.unique()) > 1:

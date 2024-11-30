@@ -1,6 +1,7 @@
 # DRL models from Stable Baselines 3
 from __future__ import annotations
 
+import hashlib
 import time
 
 import numpy as np
@@ -35,7 +36,9 @@ NOISE = {
 
 
 def hyperparameterized_model_name(model_name: str, model_kwargs: dict):
-    return model_name + '_' + '_'.join([k[0:2]+'='+str(v) for k, v in model_kwargs.items()])
+    description = model_name + '[' + ','.join([f'{k}={str(v)}' for k, v in model_kwargs.items()])+']'
+    description_hash = hashlib.md5(description.encode()).hexdigest()
+    return description_hash
 
 
 class TensorboardCallback(BaseCallback):
@@ -475,14 +478,6 @@ class DRLEnsembleAgent:
         validation_end_date_list = []
         iteration_list = []
 
-        insample_turbulence = self.df[
-            (self.df.date < self.train_period[1])
-            & (self.df.date >= self.train_period[0])
-        ]
-        insample_turbulence_threshold = np.quantile(
-            insample_turbulence.turbulence.values, 0.90
-        )
-
         start = time.time()
         for i in range(
             self.rebalance_window + self.validation_window,
@@ -507,48 +502,7 @@ class DRLEnsembleAgent:
                 # previous state
                 initial = False
 
-            # Tuning trubulence index based on historical data
-            # Turbulence lookback window is one quarter (63 days)
-            end_date_index = self.df.index[
-                self.df["date"]
-                == self.unique_trade_date[
-                    i - self.rebalance_window - self.validation_window
-                ]
-            ].to_list()[-1]
-            start_date_index = end_date_index - 63 + 1
-
-            historical_turbulence = self.df.iloc[
-                start_date_index : (end_date_index + 1), :
-            ]
-
-            historical_turbulence = historical_turbulence.drop_duplicates(
-                subset=["date"]
-            )
-
-            historical_turbulence_mean = np.mean(
-                historical_turbulence.turbulence.values
-            )
-
-            # print(historical_turbulence_mean)
-
-            if historical_turbulence_mean > insample_turbulence_threshold:
-                # if the mean of the historical data is greater than the 90% quantile of insample turbulence data
-                # then we assume that the current market is volatile,
-                # therefore we set the 90% quantile of insample turbulence data as the turbulence threshold
-                # meaning the current turbulence can't exceed the 90% quantile of insample turbulence data
-                turbulence_threshold = insample_turbulence_threshold
-            else:
-                # if the mean of the historical data is less than the 90% quantile of insample turbulence data
-                # then we tune up the turbulence_threshold, meaning we lower the risk
-                turbulence_threshold = np.quantile(
-                    insample_turbulence.turbulence.values, 1
-                )
-
-            turbulence_threshold = np.quantile(
-                insample_turbulence.turbulence.values, 0.99
-            )
-            print("turbulence_threshold: ", turbulence_threshold)
-
+            turbulence_threshold = 1e8
             # Environment Setup starts
             # training env
             train = data_split(
@@ -715,6 +669,8 @@ class DRLStackingAgent:
             temp_model_kwargs["action_noise"] = NOISE[
                 temp_model_kwargs["action_noise"]
             ](mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
+
+        temp_model_kwargs = {k:v for k,v in temp_model_kwargs.items() if k != 'name'}
 
         return STACKING_MODELS[model_name](
             policy=policy,
