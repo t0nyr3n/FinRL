@@ -355,7 +355,7 @@ class DRLEnsembleAgent:
                 )
             ]
         )
-        trade_env = VecNormalize(trade_env, norm_obs=False, norm_reward=True)
+        trade_env = VecNormalize(trade_env, norm_obs=True, norm_reward=True)
 
         trade_obs = trade_env.reset()
 
@@ -433,7 +433,7 @@ class DRLEnsembleAgent:
                 )
             ]
         )
-        val_env = VecNormalize(val_env, norm_obs=False, norm_reward=True)
+        val_env = VecNormalize(val_env, norm_obs=True, norm_reward=True)
 
         val_obs = val_env.reset()
         self.DRL_validation(
@@ -530,7 +530,7 @@ class DRLEnsembleAgent:
                     )
                 ]
             )
-            self.train_env = VecNormalize(self.train_env, norm_obs=False, norm_reward=True)
+            self.train_env = VecNormalize(self.train_env, norm_obs=True, norm_reward=True)
 
             validation = data_split(
                 self.df,
@@ -795,7 +795,7 @@ class DRLStackingAgent:
                 )
             ]
         )
-        trade_env = VecNormalize(trade_env, norm_obs=False, norm_reward=True)
+        trade_env = VecNormalize(trade_env, norm_obs=True, norm_reward=True)
 
 
         trade_obs = trade_env.reset()
@@ -867,7 +867,7 @@ class DRLStackingAgent:
                 )
             ]
         )
-        val_env = VecNormalize(val_env, norm_obs=False, norm_reward=True)
+        val_env = VecNormalize(val_env, norm_obs=True, norm_reward=True)
         val_obs = val_env.reset()
         self.DRL_validation(
             model=model,
@@ -982,7 +982,7 @@ class DRLStackingAgent:
                     )
                 ]
             )
-            self.train_env = VecNormalize(self.train_env, norm_obs=False, norm_reward=True)
+            self.train_env = VecNormalize(self.train_env, norm_obs=True, norm_reward=True)
 
             validation = data_split(
                 self.df,
