@@ -19,11 +19,11 @@ MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO}
 # load 5 models
 
 PRETRAINED_MODEL_CONFIGS = [
-    {"model_type": "ppo", "model_path": "trained_models/f39725b2d259df800dc97ca95f52fbb0_10k_400"},
-    {"model_type": "a2c", "model_path": "trained_models/210871e0535ee3313f8053f76e6791d0_10k_400"},
-    {"model_type": "ddpg", "model_path": "trained_models/42990f447ea692929bb19f84fe4ce512_10k_400"},
-    {"model_type": "sac", "model_path": "trained_models/fd9fd3e1288e22a857f30c44645d8997_10k_400"},
-    {"model_type": "td3", "model_path": "trained_models/d4d1805323cb87f6cbf3f5e3e76a3a15_10k_400"},
+    {"model_type": "ppo", "model_path": "trained_model/508cf4f679d46850266d5e59ea4b9ab2_10k_315"},
+    {"model_type": "a2c", "model_path": "trained_model/45bcb34f2a2bb70acde744490d43a80a_10k_315"},
+    {"model_type": "ddpg", "model_path": "trained_model/7c04b9446a0b71360cddd14422521934_10k_315"},
+    {"model_type": "sac", "model_path": "trained_model/82e3208736786c850204f98dd2f8d12b_10k_315"},
+    {"model_type": "td3", "model_path": "trained_model/e9f113e59d396991a265e19424b8ca90_10k_315"},
 ]
 
 matplotlib.use("Agg")
