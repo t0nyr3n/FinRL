@@ -24,7 +24,7 @@ from finrl.meta.env_stock_trading.env_stocktrading_stacking import (
 from finrl.meta.preprocessor.preprocessors import data_split
 
 MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO}
-STACKING_MODELS = {"model_6": A2C}
+STACKING_MODELS = {"model_6": SAC}
 
 MODEL_KWARGS = {x: config.__dict__[f"{x.upper()}_PARAMS"] for x in MODELS.keys()}
 
@@ -372,6 +372,7 @@ class DRLEnsembleAgent:
 
     def _train_window(
         self,
+        train,
         model_name,
         model_kwargs,
         sharpe_list,
@@ -391,10 +392,32 @@ class DRLEnsembleAgent:
 
         print(f"======{model_name} Training========")
 
-        self.train_env.model_file_suffix = model_file_suffix
+        train_env =VecNormalize(DummyVecEnv(
+            [
+                lambda: StockTradingEnv(
+                    df=train,
+                    stock_dim=self.stock_dim,
+                    hmax=self.hmax,
+                    initial_amount=self.initial_amount,
+                    num_stock_shares=[0] * self.stock_dim,
+                    buy_cost_pct=[self.buy_cost_pct] * self.stock_dim,
+                    sell_cost_pct=[self.sell_cost_pct] * self.stock_dim,
+                    reward_scaling=self.reward_scaling,
+                    state_space=self.state_space,
+                    action_space=self.action_space,
+                    mode='train',
+                    iteration=model_kwargs["name"],
+                    tech_indicator_list=self.tech_indicator_list,
+                    print_verbosity=self.print_verbosity,
+                    model_file_suffix=model_file_suffix,
+                )
+            ]
+        ),norm_obs=True, norm_reward=True)
+
         model = self.get_model(
-            model_name, self.train_env, policy="MlpPolicy", model_kwargs=model_kwargs, model_file_suffix=model_file_suffix
+            model_name, train_env, policy="MlpPolicy", model_kwargs=model_kwargs, model_file_suffix=model_file_suffix
         )
+
         model = self.train_model(
             model,
             model_name,
@@ -512,25 +535,6 @@ class DRLEnsembleAgent:
                     i - self.rebalance_window - self.validation_window
                 ],
             )
-            self.train_env = DummyVecEnv(
-                [
-                    lambda: StockTradingEnv(
-                        df=train,
-                        stock_dim=self.stock_dim,
-                        hmax=self.hmax,
-                        initial_amount=self.initial_amount,
-                        num_stock_shares=[0] * self.stock_dim,
-                        buy_cost_pct=[self.buy_cost_pct] * self.stock_dim,
-                        sell_cost_pct=[self.sell_cost_pct] * self.stock_dim,
-                        reward_scaling=self.reward_scaling,
-                        state_space=self.state_space,
-                        action_space=self.action_space,
-                        tech_indicator_list=self.tech_indicator_list,
-                        print_verbosity=self.print_verbosity,
-                    )
-                ]
-            )
-            self.train_env = VecNormalize(self.train_env, norm_obs=True, norm_reward=True)
 
             validation = data_split(
                 self.df,
@@ -558,6 +562,7 @@ class DRLEnsembleAgent:
             for model_name in MODELS.keys():
                 model_file_suffix = hyperparameterized_model_name(model_name, kwargs[model_name])
                 model, sharpe_list, sharpe = self._train_window(
+                    train,
                     model_name,
                     kwargs[model_name],
                     model_dct[model_name]["sharpe_list"],
@@ -731,6 +736,8 @@ class DRLStackingAgent:
         action_space,
         tech_indicator_list,
         print_verbosity,
+        pretrained_model_configs
+
     ):
         self.df = df
         self.train_period = train_period
@@ -752,6 +759,7 @@ class DRLStackingAgent:
         self.tech_indicator_list = tech_indicator_list
         self.print_verbosity = print_verbosity
         self.train_env = None
+        self.pretrained_model_configs = pretrained_model_configs
 
 
     def DRL_validation(self, model, test_data, test_env, test_obs):
@@ -792,6 +800,8 @@ class DRLStackingAgent:
                     mode="trade",
                     iteration=iter_num,
                     print_verbosity=self.print_verbosity,
+                    pretrained_model_configs=self.pretrained_model_configs
+
                 )
             ]
         )
@@ -864,6 +874,8 @@ class DRLStackingAgent:
                     model_name=model_name,
                     mode="validation",
                     print_verbosity=self.print_verbosity,
+                    pretrained_model_configs=self.pretrained_model_configs
+
                 )
             ]
         )
@@ -979,6 +991,7 @@ class DRLStackingAgent:
                         action_space=self.action_space,
                         tech_indicator_list=self.tech_indicator_list,
                         print_verbosity=self.print_verbosity,
+                        pretrained_model_configs=self.pretrained_model_configs
                     )
                 ]
             )

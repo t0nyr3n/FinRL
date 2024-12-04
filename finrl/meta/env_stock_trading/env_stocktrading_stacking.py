@@ -18,14 +18,6 @@ MODELS = {"a2c": A2C, "ddpg": DDPG, "td3": TD3, "sac": SAC, "ppo": PPO}
 
 # load 5 models
 
-PRETRAINED_MODEL_CONFIGS = [
-    {"model_type": "ppo", "model_path": "trained_model/508cf4f679d46850266d5e59ea4b9ab2_10k_315"},
-    {"model_type": "a2c", "model_path": "trained_model/45bcb34f2a2bb70acde744490d43a80a_10k_315"},
-    {"model_type": "ddpg", "model_path": "trained_model/7c04b9446a0b71360cddd14422521934_10k_315"},
-    {"model_type": "sac", "model_path": "trained_model/82e3208736786c850204f98dd2f8d12b_10k_315"},
-    {"model_type": "td3", "model_path": "trained_model/e9f113e59d396991a265e19424b8ca90_10k_315"},
-]
-
 matplotlib.use("Agg")
 
 # from stable_baselines3.common.logger import Logger, KVWriter, CSVOutputFormat
@@ -58,8 +50,8 @@ class StockTradingStackingEnv(gym.Env):
         previous_state=[],
         model_name="",
         mode="",
-        iteration=""
-
+        iteration="",
+        pretrained_model_configs={}
     ):
         self.day = day
         self.df = df
@@ -88,6 +80,7 @@ class StockTradingStackingEnv(gym.Env):
         self.model_name = model_name
         self.mode = mode
         self.iteration = iteration
+        self.pretrained_model_configs = pretrained_model_configs
         # initalize state
         self.state = self._initiate_state()
         # initialize reward
@@ -117,7 +110,7 @@ class StockTradingStackingEnv(gym.Env):
 
     def load_pretrained(self):
         self.stacking_models = {}
-        for pretrained_model_info in PRETRAINED_MODEL_CONFIGS:
+        for pretrained_model_info in self.pretrained_model_configs:
             _m = self._load_model(
                 model_type=pretrained_model_info["model_type"],
                 model_path=pretrained_model_info["model_path"],
@@ -293,29 +286,54 @@ class StockTradingStackingEnv(gym.Env):
                     print(f"Sharpe: {sharpe:0.3f}")
                 print("=================================")
 
-            if (self.model_name != "") and (self.mode != ""):
+            if (self.mode != ""):
                 df_actions = self.save_action_memory()
                 df_actions.to_csv(
-                    "results/actions_{}_{}_{}.csv".format(
-                        self.mode, self.model_name, self.iteration
+                    "results/actions_{}_{}_{}_{}.csv".format(
+                        self.mode, self.model_file_suffix, self.iteration, self.episode
                     )
+                )
+                df_actions.to_csv(
+                    "results/actions_{}_{}_{}.csv".format(
+                        self.mode, self.model_file_suffix, self.iteration
+                    )
+                )
+
+                df_total_value.to_csv(
+                    "results/account_value_{}_{}_{}_{}.csv".format(
+                        self.mode, self.model_file_suffix, self.iteration, self.episode
+                    ),
+                    index=False,
                 )
                 df_total_value.to_csv(
                     "results/account_value_{}_{}_{}.csv".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
+                    ),
+                    index=False,
+                )
+
+                df_rewards.to_csv(
+                    "results/account_rewards_{}_{}_{}_{}.csv".format(
+                        self.mode, self.model_file_suffix, self.iteration, self.episode
                     ),
                     index=False,
                 )
                 df_rewards.to_csv(
                     "results/account_rewards_{}_{}_{}.csv".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
                     ),
                     index=False,
                 )
+
                 plt.plot(self.asset_memory, "r")
                 plt.savefig(
+                    "results/account_value_{}_{}_{}_{}.png".format(
+                        self.mode, self.model_file_suffix, self.iteration, self.episode
+                    )
+                )
+                plt.savefig(
                     "results/account_value_{}_{}_{}.png".format(
-                        self.mode, self.model_name, self.iteration
+                        self.mode, self.model_file_suffix, self.iteration
                     )
                 )
                 plt.close()
