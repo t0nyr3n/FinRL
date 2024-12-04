@@ -51,7 +51,8 @@ class StockTradingStackingEnv(gym.Env):
         model_name="",
         mode="",
         iteration="",
-        pretrained_model_configs={}
+        pretrained_model_configs={},
+        model_file_suffix=""
     ):
         self.day = day
         self.df = df
@@ -78,6 +79,7 @@ class StockTradingStackingEnv(gym.Env):
         self.initial = initial
         self.previous_state = previous_state
         self.model_name = model_name
+        self.model_file_suffix = model_file_suffix
         self.mode = mode
         self.iteration = iteration
         self.pretrained_model_configs = pretrained_model_configs
